@@ -56,6 +56,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"log"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -192,13 +196,47 @@ type LeaderElector struct {
 	// name is the name of the resource lock for debugging
 	name string
 }
+// check if the node is eligible or not
+func isEligibleToAcquireLock(nodeId string,namespace string) bool {
+	config, err := restclient.InClusterConfig()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-// Run starts the leader election loop
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatalln(err)
+		return false
+	}
+
+	pod, err := kubeClient.CoreV1().Pods(namespace).Get(context.TODO(),nodeId, metav1.GetOptions{})
+	if err != nil {
+		log.Fatalln(err)
+		return false
+	}
+
+
+	isEligible := pod.Labels["isEligible"]
+	if isEligible == "true" {
+		return true
+	}
+	return false
+
+
+}
+// Run starts the leader election loop. Run will not return
+// before leader election loop is stopped by ctx or it has
+// stopped holding the leader lease
 func (le *LeaderElector) Run(ctx context.Context) {
+	defer runtime.HandleCrash()
 	defer func() {
-		runtime.HandleCrash()
 		le.config.Callbacks.OnStoppedLeading()
 	}()
+
+	//***************************need to add code emon*********************
+
+
+
 	if !le.acquire(ctx) {
 		return // ctx signalled done
 	}
@@ -241,9 +279,22 @@ func (le *LeaderElector) acquire(ctx context.Context) bool {
 	desc := le.config.Lock.Describe()
 	klog.Infof("attempting to acquire leader lease  %v...", desc)
 	wait.JitterUntil(func() {
+
+
+		nodeID := le.config.Lock.Identity()
+		namespace := strings.Split(le.config.Lock.Describe(),"/")[0]
+
+
+		if !isEligibleToAcquireLock(nodeID,namespace) {
+			//fmt.Println("...................................not eligible(cmf)")
+			return
+		}
+
+		//fmt.Println("..................................acquire()")
 		succeeded = le.tryAcquireOrRenew(ctx)
 		le.maybeReportTransition()
 		if !succeeded {
+			//fmt.Println("..................................acquire() succeeded false")
 			klog.V(4).Infof("failed to acquire lease %v", desc)
 			return
 		}
@@ -262,16 +313,27 @@ func (le *LeaderElector) renew(ctx context.Context) {
 	wait.Until(func() {
 		timeoutCtx, timeoutCancel := context.WithTimeout(ctx, le.config.RenewDeadline)
 		defer timeoutCancel()
-		err := wait.PollImmediateUntil(le.config.RetryPeriod, func() (bool, error) {
-			return le.tryAcquireOrRenew(timeoutCtx), nil
-		}, timeoutCtx.Done())
-
-		le.maybeReportTransition()
+		var err error
+		nodeID := le.config.Lock.Identity()
 		desc := le.config.Lock.Describe()
-		if err == nil {
-			klog.V(5).Infof("successfully renewed lease %v", desc)
-			return
+		namespace := strings.Split(desc,"/")[0]
+
+		if isEligibleToAcquireLock(nodeID,namespace) {
+			err = wait.PollImmediateUntil(le.config.RetryPeriod, func() (bool, error) {
+				return le.tryAcquireOrRenew(timeoutCtx), nil
+			}, timeoutCtx.Done())
+
+			le.maybeReportTransition()
+			if err == nil {
+				//fmt.Println(".........................renewed")
+				klog.V(5).Infof("successfully renewed lease %v", desc)
+				return
+			}
+		} else {
+			err = fmt.Errorf("the node is not eligible for leader election")
 		}
+
+
 		le.config.Lock.RecordEvent("stopped leading")
 		le.metrics.leaderOff(le.config.Name)
 		klog.Infof("failed to renew lease %v: %v", desc, err)
