@@ -216,7 +216,7 @@ func isEligibleToAcquireLock(nodeId string,namespace string) bool {
 	}
 
 
-	isEligible := pod.Labels["isEligible"]
+	isEligible := pod.Labels["kubedb.com/isEligible"]
 	if isEligible == "true" {
 		return true
 	}

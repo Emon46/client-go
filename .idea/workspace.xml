@@ -29,7 +29,7 @@
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../kubedb.dev/redis" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -45,9 +45,13 @@
     <integration-enabled>true</integration-enabled>
   </component>
   <component name="WindowStateProjectService">
-    <state x="723" y="253" width="530" height="598" key="FileChooserDialogImpl" timestamp="1600259385893">
+    <state x="723" y="253" width="530" height="598" key="FileChooserDialogImpl" timestamp="1600665265285">
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
-    <state x="723" y="253" width="530" height="598" key="FileChooserDialogImpl/67.27.1853.1053/1920.0.1920.1080@67.27.1853.1053" timestamp="1600259385893" />
+    <state x="723" y="253" width="530" height="598" key="FileChooserDialogImpl/67.27.1853.1053/1920.0.1920.1080@67.27.1853.1053" timestamp="1600665265285" />
+    <state x="614" y="235" width="759" height="634" key="find.popup" timestamp="1600324702437">
+      <screen x="67" y="27" width="1853" height="1053" />
+    </state>
+    <state x="614" y="235" width="759" height="634" key="find.popup/67.27.1853.1053/1920.0.1920.1080@67.27.1853.1053" timestamp="1600324702437" />
   </component>
 </project>
